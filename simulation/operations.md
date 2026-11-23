@@ -42,7 +42,7 @@ free -h
 
 ## 手动运行已准备的分片
 
-第一次录杯身／杯柄，使用入门页的一条命令。以下入口供已经生成分片配置和清单的人使用。`JOB_DIR` 是该项目 `runs/` 下的新目录。 [专家采集入门](README.md#一条命令采两条轨迹)
+第一次录一组示例，使用入门页的一条命令。以下入口供已经生成分片配置和清单的人使用。`JOB_DIR` 是该项目 `runs/` 下的新目录。 [专家采集入门](README.md#录一组你想看的场景)
 
 ```bash
 G1D_WORKER_CONFIG="$SHARD_CONFIG" bash run_lab_school.sh "$JOB_DIR" \
@@ -53,6 +53,8 @@ G1D_WORKER_CONFIG="$SHARD_CONFIG" bash run_lab_school.sh "$JOB_DIR" \
 出错时检查单场目录的 `expert_diagnostic.json`。其中含 `policy_rollout`、门控状态、试提原因、接触与阶段信息。再读同目录的 `physics_trace.jsonl` 或对应分片日志。
 
 ## 批量运行与恢复
+
+完整的任务配比和日常命令见 [批量采集指南](batch-collection.md)。
 
 总控把扩采合库、训练、评测串行衔接。首次启动或代码和输入变更后先运行预检。它检查资产隔离、去重、分片和两目标模板，运行训练入口的小规模前向与分片数学检查，并检查评测绑定及报告生成。预检通过后在 tmux 脱离终端运行。
 

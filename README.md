@@ -4,9 +4,10 @@
 
 [下载带 BBox 的模型输入输出 HTML](docs/demos/model-io.html) · [下载同款 MP4 演示](docs/demos/model-io.mp4)
 
-## 想采数据，先跑杯子示例
+## 想采数据，从这里开始
 
-用 `simulation/record_expert_demo.py` 录两条，一条抓杯身，一条抓杯柄。入门页给出实验服务器上的完整命令，并说明在哪里找录好的 HDF5。 [专家采集入门](simulation/README.md)
+- **先录一组**。用 `simulation/record_expert_demo.py` 选择杯子、篮子、长盒、白盒与罐子等预设。也能选大偏航和绕障。 [专家采集入门](simulation/README.md)
+- **批量录制**。按资产和任务配额生成新场景，验收后自动合库。 [批量采集指南](simulation/batch-collection.md)
 
 ## V3-A 和 V3-B 是什么
 
@@ -27,7 +28,8 @@
 | 查有哪些物体、抓取部位、障碍与已验收数据 | [数据清单](docs/datasets.md) |
 | 复用 HDF5、划分数据、接入自己的模型 | [数据管线与换模型指南](docs/data-pipeline.md) |
 | 第一次用专家脚本录制 | [专家采集入门](simulation/README.md) |
-| 配置仿真环境、批量采集和恢复后台任务 | [仿真进阶操作](simulation/operations.md) |
+| 批量采集、看进度、暂停或继续 | [批量采集指南](simulation/batch-collection.md) |
+| 配置仿真或查底层脚本 | [仿真进阶操作](simulation/operations.md) |
 
 ## 本地快速检查
 

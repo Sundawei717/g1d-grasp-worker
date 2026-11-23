@@ -1,6 +1,6 @@
 # 数据清单与任务覆盖
 
-[返回仓库首页](../README.md) · [数据如何读取](data-pipeline.md) · [专家如何采集](../simulation/README.md)
+[返回仓库首页](../README.md) · [数据如何读取](data-pipeline.md) · [单组采集](../simulation/README.md) · [批量采集](../simulation/batch-collection.md)
 
 一条轨迹对应一个固定初态下的一项抓取指令。示教保存接近、闭爪和试提。相同场景可以有两项指令，例如同框抓杯身或杯柄。关联指令用 `pair_group_id` 记录，训练和验证整组分配。资产名称指场景中的抓取目标。同一资产也可能在其他任务中作为障碍。
 

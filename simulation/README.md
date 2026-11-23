@@ -1,36 +1,39 @@
 # 第一次用专家脚本采集
 
-专家脚本根据场景和指定部位规划右臂动作，再用 Isaac Sim 实际执行并录制。第一次可以用同一只棕色带柄杯录两条，一条夹杯身，一条夹杯柄。
+专家脚本让 G1D 在 Isaac Sim 里按指定部位抓取，然后录下画面、机器人状态和动作。**先录两条看看效果**，用 [record_expert_demo.py](record_expert_demo.py)。**想一次采上百条不同任务**，看 [批量采集指南](batch-collection.md)。
 
-## 专家脚本在哪里
+## 录一组你想看的场景
 
-| 找什么 | 文件 |
-| --- | --- |
-| **直接录一对示教** | [record_expert_demo.py](record_expert_demo.py) |
-| 棕杯杯身和杯柄的**专家规划** | [step1_mug_pairs.py](isaac_snapshot/step1_mug_pairs.py) |
-| 实际**录制、回放和验收** | [step3a_verify.py](isaac_snapshot/step3a_verify.py) |
-| 生成并调度**整批新示教** | [step3b_collect.py](isaac_snapshot/step3b_collect.py) |
-
-日常先用第一行。它调用原项目的录制与回放流程，直接打印两条数据的文件路径。准备更多物体时，再查看 [任务清单](../docs/datasets.md) 和 [批量采集操作](operations.md#批量运行与恢复)。
-
-## 一条命令采两条轨迹
-
-在已配置 Isaac Sim 的实验服务器上，打开终端并进入从 GitHub 下载的仓库根目录。下例使用原实验服务器的 Python 环境和仿真工程目录。第一次可在仿真机器空闲时运行。
+在已配置仿真的实验服务器上，进入从 GitHub 下载的仓库根目录。下例录 **小篮子：抓顶部提手、抓侧边篮沿**。
 
 ```bash
-/data/sundawei/vla_rsi_g1d/envs/sim60/bin/python simulation/record_expert_demo.py --project-dir /data/sundawei/g1d_grasp_worker
+/data/sundawei/vla_rsi_g1d/envs/sim60/bin/python simulation/record_expert_demo.py --project-dir /data/sundawei/g1d_grasp_worker --preset basket
 ```
 
-在另一台已配置的服务器上，把命令里的 Python 和 `--project-dir` 改成本机路径。`--project-dir` 指向装好资产、相机标定和场景计划的**仿真工程**。仅下载 GitHub 仓库时，可以先观看已有演示。 [仿真安装与交接文件](operations.md#运行环境与交接文件) · [模型演示 MP4](../docs/demos/model-io.mp4)
+换物体或场景，只改最后的 `basket`。下表每个预设录两次，分别验证抓起和部位命中。
 
-想先检查路径，在命令末尾加 `--check`。它会检查一对现成专家计划和所需的工程文件。去掉 `--check` 才会启动仿真录制。
+| 命令中的预设 | 会录什么 |
+| --- | --- |
+| `mug` | 棕色带柄杯，−15°，同一只杯子分别夹杯身、杯柄 |
+| `mug-minus75` | 棕杯转到 −75°，分别夹杯身、杯柄 |
+| `mug-plus75-obstacle` | 棕杯转到 +75°，桌上有挡路物，两种部位都绕过去夹 |
+| `basket` | 小篮 0°，夹顶部提手、侧边篮沿 |
+| `basket-plus75` | 小篮转到 +75°，夹提手、篮沿 |
+| `basket-obstacle` | 小篮 +34°，有挡路物，夹提手、篮沿 |
+| `long-box` | 长盒 −85°，分别夹物体长轴两端 |
+| `long-box-obstacle` | 长盒 +52°，绕过挡路物后分别夹两端 |
+| `white-box-pepsi` | 同一张桌子上有白盒和百事罐，一次抓白盒，一次抓罐。沿用已验收的原专家动作重录 |
+| `sugar-box`、`ycb-mug`、`raised-rim-basket` | 糖盒两端、YCB 带柄杯杯身／杯柄、高侧沿篮提手／篮沿 |
+| `marker-long-box`、`compact-box`、`round-package`、`matte-soda` | 竖放标记长盒、紧凑盒、圆包装、哑光罐。对同一部位分别录无障与绕障 |
 
-## 结果在哪里
+偏航角是物体在桌面上转过的角度。正负表示转向。上述预设指向已经验真过的场景，可以用 `python simulation/record_expert_demo.py --list` 列出完整名称。实际采集命令末尾加 `--check` 会先检查配置和专家计划。去掉 `--check` 才会启动仿真。使用另一台实验机时，换成本机的仿真 Python 和工程目录。 [安装与资产交接](operations.md#运行环境与交接文件)
 
-- 终端显示 `PASS: 2/2` 表示杯身和杯柄都录制成功，重放后能抬起杯子，且夹到了指定部位。
-- 终端在 `mug_body` 和 `mug_handle` 后打印两条 `.h5` 的完整路径。文件中有头部、左右腕画面和实际动作。
-- `Result:` 后是验收 JSON 的完整路径。失败时先看这里，再按终端给的诊断路径找对应场景。
+## 看录制结果
 
-示例借用一对已验真的开发场景。生成的数据用于熟悉操作，训练数据仍按自己的采集清单和分区管理。
+- 终端出现 `PASS: 2/2` 表示两条轨迹都录制并重放成功，且夹到了要求的部位。
+- 终端会打印每条 `.h5` 和验收 JSON 的完整路径。HDF5 保存头部、左腕、右腕画面及实际动作。
+- 示例用于验证环境和熟悉流程。正式扩采会生成新初态和新 ID，然后按配对整组入库。
 
-[返回仓库首页](../README.md) · [专家与仿真进阶操作](operations.md) · [全部脚本索引](isaac_snapshot/INDEX.md)
+想了解新角度、多物换目标和障碍怎样批量生成，见 [批量采集指南](batch-collection.md)。专家规划和回放逻辑分别位于 [棕杯专家](isaac_snapshot/step1_mug_pairs.py)、[通用规划器](isaac_snapshot/step3a_planner.py) 和 [录制验收器](isaac_snapshot/step3a_verify.py)。
+
+[返回仓库首页](../README.md) · [全部脚本索引](isaac_snapshot/INDEX.md)
