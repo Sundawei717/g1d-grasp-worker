@@ -1,0 +1,257 @@
+{
+  "source_sha256": "99fdf2094ffc8dd27d87cefff4a160257afd37bdce5c82ccfce1b7747124cbb9",
+  "cases": [
+    {
+      "case_id": "B_9828",
+      "scene_id": "tier1_dev_basket_0010_basket_handle",
+      "episode_id": "tier1_dev_B_9828",
+      "scene_signature": "540c133b56b0168f7d5ce22f97a88f0bc934c84a72120486a7b57b42dc9ec146",
+      "asset_family": "basket/00001",
+      "part": "basket_handle",
+      "expert_sha256": "cc9233a0ad25dcfa0ca12c1beb61d60661462d6e9813e16600ed411cdedb96dd"
+    },
+    {
+      "case_id": "B_9829",
+      "scene_id": "tier1_dev_basket_0010_basket_rim",
+      "episode_id": "tier1_dev_B_9829",
+      "scene_signature": "cfce66604fa12324ce0fd97771e8026249a072d16dc4d9b8cbc5a7f5b3cbf6b8",
+      "asset_family": "basket/00001",
+      "part": "basket_rim",
+      "expert_sha256": "b85632cea653e4d2e4a24423718edbac261faa5915759dea4e79fd52c7953dca"
+    },
+    {
+      "case_id": "B_9832",
+      "scene_id": "tier1_dev_basket_0013_basket_handle",
+      "episode_id": "tier1_dev_B_9832",
+      "scene_signature": "715b33cbfcbd9011964d51d9fccb5ed5c0c3991ed5e08293f0420b803cce9425",
+      "asset_family": "basket/00001",
+      "part": "basket_handle",
+      "expert_sha256": "f4c38dc9c389f0f6a8515f4efcac9bbeab1254fd54ee6b53b0dd35d5325cfdfc"
+    },
+    {
+      "case_id": "B_9833",
+      "scene_id": "tier1_dev_basket_0013_basket_rim",
+      "episode_id": "tier1_dev_B_9833",
+      "scene_signature": "520dd92eab2b2769e8ffe33b35a8a1ef364b6e0910ec3a2ea519503224e0525a",
+      "asset_family": "basket/00001",
+      "part": "basket_rim",
+      "expert_sha256": "49fc955ed76ed16f8b091c939d7c1c5f0acc4a318cc88fc7ee8888e132ebce99"
+    },
+    {
+      "case_id": "C_9800",
+      "scene_id": "tier1_dev_basket_0002_basket_handle",
+      "episode_id": "tier1_dev_C_9800",
+      "scene_signature": "cdae0a09e6f1ed1267d40d205ca6d9c0b540c7efbe7257e8dcc48cb7865204d0",
+      "asset_family": "basket/00001",
+      "part": "basket_handle",
+      "expert_sha256": "f8996ae9b8ce12882f218a06d509fda049c0ce89a16546e34d919b43095c7433"
+    },
+    {
+      "case_id": "C_9801",
+      "scene_id": "tier1_dev_basket_0002_basket_rim",
+      "episode_id": "tier1_dev_C_9801",
+      "scene_signature": "4c22285b3a8b16769e618e965aeca42e64f4d2a667b8866b2978342c0c35d1ab",
+      "asset_family": "basket/00001",
+      "part": "basket_rim",
+      "expert_sha256": "ceee785c6d5b6bbfaeeed53cd6f86b652629782654f5327fd60870e8030de996"
+    },
+    {
+      "case_id": "C_9802",
+      "scene_id": "tier1_dev_basket_0003_basket_handle",
+      "episode_id": "tier1_dev_C_9802",
+      "scene_signature": "c13ae3536f500800221b85aa7c88f5c2fea34f77352c4313f9a8656f8341b7a2",
+      "asset_family": "basket/00001",
+      "part": "basket_handle",
+      "expert_sha256": "9256697b72cbcbfa620a2ec7e4bfa971d2f46248afb53c94b31c290fedffb640"
+    },
+    {
+      "case_id": "C_9803",
+      "scene_id": "tier1_dev_basket_0003_basket_rim",
+      "episode_id": "tier1_dev_C_9803",
+      "scene_signature": "b8f7e49f8d6e2af245dfc7a6761d3e87b700c9a040a67db33f52382251d0a2d1",
+      "asset_family": "basket/00001",
+      "part": "basket_rim",
+      "expert_sha256": "cfeecea9620d3d45d67961c2f2e270f5a1d353d8a2b6d24660f4ddc2d5aceac7"
+    },
+    {
+      "case_id": "C_9816",
+      "scene_id": "tier1_dev_basket_0000_basket_handle",
+      "episode_id": "tier1_dev_C_9816",
+      "scene_signature": "9fc99123e11f1b814052229570ea5c60fb43121b8162767651fe49a39fbc0c39",
+      "asset_family": "basket/00001",
+      "part": "basket_handle",
+      "expert_sha256": "865c4f4b1bc2af73a5905223cd14834ab52610f1a4cf476d0212ebf0d9ce4c5d"
+    },
+    {
+      "case_id": "C_9817",
+      "scene_id": "tier1_dev_basket_0000_basket_rim",
+      "episode_id": "tier1_dev_C_9817",
+      "scene_signature": "ffa985b267a599321d7edc1942bec8ab3763f95f15d14f8516d9478cbf3de61b",
+      "asset_family": "basket/00001",
+      "part": "basket_rim",
+      "expert_sha256": "12d8fe4dd0f77ae332f4fd8e4b7dfedc085b1833e87f9998bda38f923b5d21af"
+    },
+    {
+      "case_id": "B_9836",
+      "scene_id": "tier1_dev_carton_0007_box_negative_end",
+      "episode_id": "tier1_dev_B_9836",
+      "scene_signature": "8ff000298ef8753ac64a67f31890246074a92390410ce394e9e921f426bcdf7e",
+      "asset_family": "sand3d_packaging/00208",
+      "part": "box_negative_end",
+      "expert_sha256": "a2d88bd0e9a8a936bdc699795d220230c36e4a2ac42afe12a306a473b7f977de"
+    },
+    {
+      "case_id": "B_9837",
+      "scene_id": "tier1_dev_carton_0007_box_positive_end",
+      "episode_id": "tier1_dev_B_9837",
+      "scene_signature": "91fc64cdc88510962c937e2909e4a22b04506cf3c38e9836f50530430dc0f9e9",
+      "asset_family": "sand3d_packaging/00208",
+      "part": "box_positive_end",
+      "expert_sha256": "7769fb5baa61a4c7fc3ae68b78775fd2f4107c41b5708f578f6294630514eaea"
+    },
+    {
+      "case_id": "C_9808",
+      "scene_id": "tier1_dev_carton_0002_box_negative_end",
+      "episode_id": "tier1_dev_C_9808",
+      "scene_signature": "c5969fa9dd13464b9f433e71f89ca0619eaba39aeadac75f0a5c07e83f5d667f",
+      "asset_family": "sand3d_packaging/00208",
+      "part": "box_negative_end",
+      "expert_sha256": "d1573f3461acf1ea826c8c65bd85269e92288eab76e476e1262d0d823681daf7"
+    },
+    {
+      "case_id": "C_9809",
+      "scene_id": "tier1_dev_carton_0002_box_positive_end",
+      "episode_id": "tier1_dev_C_9809",
+      "scene_signature": "71cb287d047d9b3011141262dcbaad2d2e4e2ac174ba81e8d483ac48cb2e5e75",
+      "asset_family": "sand3d_packaging/00208",
+      "part": "box_positive_end",
+      "expert_sha256": "9344de83d4b2b012caf713df33f4eac870b85fd56852169e653b2fb934ada0ab"
+    },
+    {
+      "case_id": "B_9830",
+      "scene_id": "tier1_dev_mug_0013_mug_body",
+      "episode_id": "tier1_dev_B_9830",
+      "scene_signature": "de48b58a7768197128bdf6ab0c2290869f430372c7249980945a691786d50203",
+      "asset_family": "mug/00007",
+      "part": "mug_body",
+      "expert_sha256": "0460b7d98dd0dafe2146bb46f3342a90303a8c2eb93c048f3b586e275f694b35"
+    },
+    {
+      "case_id": "B_9831",
+      "scene_id": "tier1_dev_mug_0013_mug_handle",
+      "episode_id": "tier1_dev_B_9831",
+      "scene_signature": "5bf5916b1ecba54158ac7b4314ad939f7e8024025bffb0f01d4a69bd317f299e",
+      "asset_family": "mug/00007",
+      "part": "mug_handle",
+      "expert_sha256": "4a5c9ce61a56dcc76c49a68486259355e768f136447f55e244ad1190cc16ccb7"
+    },
+    {
+      "case_id": "B_9834",
+      "scene_id": "tier1_dev_mug_0004_mug_body",
+      "episode_id": "tier1_dev_B_9834",
+      "scene_signature": "89a9c1d9dc0d22f013fdc28d761196e8ac90861a050bc24dbce3f12e7519d29f",
+      "asset_family": "mug/00007",
+      "part": "mug_body",
+      "expert_sha256": "276a265c962268e809989cb0264dc647b5ce0c315751127430abf1ac6917566f"
+    },
+    {
+      "case_id": "B_9835",
+      "scene_id": "tier1_dev_mug_0004_mug_handle",
+      "episode_id": "tier1_dev_B_9835",
+      "scene_signature": "b7d56d101e7749b2cee5cafa92e05a52d0e0b9b3cd4d407431abd5003b9c159f",
+      "asset_family": "mug/00007",
+      "part": "mug_handle",
+      "expert_sha256": "a88ef8ca1fb4a7849e7fce2920f3c99c961b6d99247cff2e6ab9d6854693fdbf"
+    },
+    {
+      "case_id": "C_9810",
+      "scene_id": "tier1_dev_mug_0003_mug_body",
+      "episode_id": "tier1_dev_C_9810",
+      "scene_signature": "c7e0d907b509717dcc95bd067daddb8e55ff0fdf125a17098813a1487c14c5a5",
+      "asset_family": "mug/00007",
+      "part": "mug_body",
+      "expert_sha256": "f8ba4a241fc59b8ca1a579dba278c56befb44525e74a46684aa104747f464b3b"
+    },
+    {
+      "case_id": "C_9811",
+      "scene_id": "tier1_dev_mug_0003_mug_handle",
+      "episode_id": "tier1_dev_C_9811",
+      "scene_signature": "c10420ef37674e04589e526cc54d6acce258e4ff9a9832d8ef6731341128b13b",
+      "asset_family": "mug/00007",
+      "part": "mug_handle",
+      "expert_sha256": "8fb5d1a9843aef0e034db1b94f6b402f55bbd16ff523cfdb1704414dce9fd831"
+    },
+    {
+      "case_id": "C_9812",
+      "scene_id": "tier1_dev_mug_0000_mug_body",
+      "episode_id": "tier1_dev_C_9812",
+      "scene_signature": "6ec5d5581479216788eb3bdd82a4f5365e657b2c1ca1595e1f5bdf4b10bfb0f1",
+      "asset_family": "mug/00007",
+      "part": "mug_body",
+      "expert_sha256": "c288d79fab83ac0c6ccf1eee84770d35464dd4fcb4491f4b3056bb88b4d81ce7"
+    },
+    {
+      "case_id": "C_9813",
+      "scene_id": "tier1_dev_mug_0000_mug_handle",
+      "episode_id": "tier1_dev_C_9813",
+      "scene_signature": "7abdbc64f9b4bd0bdb06616312f73c8b700486a09660377f8d122e60c06b43b6",
+      "asset_family": "mug/00007",
+      "part": "mug_handle",
+      "expert_sha256": "e096b9c2a6c2192afab3d332c8cabe572f663f271ac249dce570619ee535f30b"
+    },
+    {
+      "case_id": "C_9814",
+      "scene_id": "tier1_dev_mug_0002_mug_body",
+      "episode_id": "tier1_dev_C_9814",
+      "scene_signature": "df6cbfda8a44ffae80c4ee7272e1daadbc411952728d92c01d77f1934d577af8",
+      "asset_family": "mug/00007",
+      "part": "mug_body",
+      "expert_sha256": "7a4935ace718a49a76720b695fb14291781aa8c1c9e52a3e07ec6b66724ceecc"
+    },
+    {
+      "case_id": "C_9815",
+      "scene_id": "tier1_dev_mug_0002_mug_handle",
+      "episode_id": "tier1_dev_C_9815",
+      "scene_signature": "0fe0d4184e6a64a22e3b1b5db233e36a5fefdae9dceaf5e9aa27dab276947745",
+      "asset_family": "mug/00007",
+      "part": "mug_handle",
+      "expert_sha256": "ef1114768dd51a9af47d524478a57280ef29dfb330e1b3fb8c4c4a4119ce0b21"
+    },
+    {
+      "case_id": "C_9818",
+      "scene_id": "tier1_dev_carton_0005_box_negative_end",
+      "episode_id": "tier1_dev_C_9818",
+      "scene_signature": "bef830aad85d10571ca7c07abdf96c2846af5971ec076f93009b9613e8c8a02a",
+      "asset_family": "sand3d_packaging/00208",
+      "part": "box_negative_end",
+      "expert_sha256": "d39e00d0b23600a698689c49a4857fc41c14c5774bde069afbbabfeab0892e27"
+    },
+    {
+      "case_id": "C_9819",
+      "scene_id": "tier1_dev_carton_0005_box_positive_end",
+      "episode_id": "tier1_dev_C_9819",
+      "scene_signature": "d97583f73eecae3cd80dcb023c703c02adf642e70a7c6f53c6f3990563319d9f",
+      "asset_family": "sand3d_packaging/00208",
+      "part": "box_positive_end",
+      "expert_sha256": "4c16a2b40162614281cb15a0d3fece083df25ffa3e5e31acb9929d813df6d4e8"
+    },
+    {
+      "case_id": "C_6490",
+      "scene_id": "tier1_dev_carton_0095_box_negative_end_step2",
+      "episode_id": "step2_dev_C_6490",
+      "scene_signature": "b4d38a69001c44fe9747a418820f933b45214df9e2dfa04c98c6e47262e8fa49",
+      "asset_family": "sand3d_packaging/00208",
+      "part": "box_negative_end",
+      "expert_sha256": "03bfd693b604147e9a8b3def78de30584852a23b45f739f9ea6d03a9f540fc38"
+    },
+    {
+      "case_id": "C_6491",
+      "scene_id": "tier1_dev_carton_0095_box_positive_end_step2",
+      "episode_id": "step2_dev_C_6491",
+      "scene_signature": "e661417a3ea836240ccdefc46469af506c158c7d558be7a537fe9f5e80251db6",
+      "asset_family": "sand3d_packaging/00208",
+      "part": "box_positive_end",
+      "expert_sha256": "caab49fe2e13502e83c9a884f17f46ede731c22ac482a90b1dda667bdb62310d"
+    }
+  ]
+}
