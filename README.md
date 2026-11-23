@@ -4,6 +4,14 @@
 
 [下载带 BBox 的模型输入输出 HTML](docs/demos/model-io.html) · [下载同款 MP4 演示](docs/demos/model-io.mp4)
 
+## 想采数据，先跑杯子示例
+
+用 `simulation/record_expert_demo.py` 录两条，一条抓杯身，一条抓杯柄。入门页给出实验服务器上的完整命令，并说明在哪里找录好的 HDF5。 [专家采集入门](simulation/README.md)
+
+## V3-A 和 V3-B 是什么
+
+它们是同一个抓取模型的两种输入配置。**两者的头部都接收目标 BBox 和抓取点**，左腕都接收 RGB。V3-A 的右腕只看彩色图，V3-B 的右腕还多看一张检测器生成的目标框掩码。项目已选用 V3-A 做后续扩采和训练。 [对照说明与结果](docs/experiments.md#v3-a-和-v3-b-是什么)
+
 ## 当前进度
 
 - 第一批数据 **Tier-1 已验收 460 条**，覆盖带 C 形把手的棕杯、带提手小篮、长盒、白盒和百事罐。
@@ -18,7 +26,8 @@
 | 了解 V3-A 结构、张量、BBox 与动作输出，或跑离线推理 | [V3-A 模型说明](docs/model-v3a.md) |
 | 查有哪些物体、抓取部位、障碍与已验收数据 | [数据清单](docs/datasets.md) |
 | 复用 HDF5、划分数据、接入自己的模型 | [数据管线与换模型指南](docs/data-pipeline.md) |
-| 跑专家示教、原始指令回放或维护批量任务 | [专家采集与仿真操作](simulation/README.md) |
+| 第一次用专家脚本录制 | [专家采集入门](simulation/README.md) |
+| 配置仿真环境、批量采集和恢复后台任务 | [仿真进阶操作](simulation/operations.md) |
 
 ## 本地快速检查
 
@@ -32,4 +41,4 @@ g1d-data --help
 
 如果拿到项目真实数据，先按 [数据管线指南](docs/data-pipeline.md) 导入清单。用 [train_custom.py](examples/train_custom.py) 验证新模型能取数据、计算带掩码的损失并更新参数。用 [predict_v3a.py](examples/predict_v3a.py) 读取已有项目检查点并打印一次前向的 8 步动作。
 
-仓库包含源码、基准标识和小型演示。真实 HDF5、模型权重、资产、相机标定及完整场景清单由项目数据盘单独交接。重新采集和闭环评测还需要 [原始 Linux 仿真环境及配套文件](simulation/README.md#运行环境与交接文件)。
+仓库包含源码、基准标识和小型演示。真实 HDF5、模型权重、资产、相机标定及完整场景清单由项目数据盘单独交接。重新采集和闭环评测还需要 [原始 Linux 仿真环境及配套文件](simulation/operations.md#运行环境与交接文件)。
