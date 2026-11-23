@@ -1,98 +1,35 @@
-# G1D 三视角抓取
+# G1D 三视角桌面抓取
 
-这个仓库把 G1D 桌面抓取项目的**数据管线、模型和仿真运行**放在三个独立的入口里。更换模型时可以继续用同一批已验收的 HDF5、同一分区与同一评测清单。
+这个项目训练 G1D 机器人的右臂和双指夹爪，按首帧指定的目标和部位完成接近与夹持。同一只带柄杯子可以分别指定杯身或杯柄，桌上有挡路物时还要绕行。策略根据头部相机、双腕相机和机器人状态预测动作，统一执行器负责确认夹稳、试提与判分。当前实验在 Isaac Sim 中完成。
 
-## 目录
+[下载带 BBox 的模型输入输出 HTML](docs/demos/model-io.html) · [下载同款 MP4 演示](docs/demos/model-io.mp4)
 
-| 路径 | 用途 |
+## 当前进度
+
+- 第一批数据 **Tier-1 已验收 460 条**，覆盖带 C 形把手的棕杯、带提手小篮、长盒、白盒和百事罐。
+- 已选定 **V3-A** 作为扩量路线。左右腕只用 RGB，头部仍提供目标 BBox 和抓取点。用 460 条数据训练 40 轮的版本，在 28 个独立开发场景上 **19 次抓起，16 次抓起且命中指定部位**。
+- 正在做第二批 **Tier-2 扩采**，目标是沿用 460 条并净增 1,140 条，总计 1,600 条。随后训练 80 轮，先在 28 个开发场景选权重，再与现有基线在冻结的 80 个任务上对照。各阶段状态、日期和进度文件见 [项目方案与进展](docs/experiments.md)。
+
+## 从哪里开始
+
+| 我想做什么 | 从这里读 |
 | --- | --- |
-| [src/g1d_grasp/data](src/g1d_grasp/data/) | 可移植清单、校验、防泄漏切分、NumPy 训练窗口 |
-| [src/g1d_grasp/models](src/g1d_grasp/models/) | 可选 V3-A 模型、BBox 与抓取点编码、检查点推理 |
-| [examples](examples/) | 接入新模型的最小训练示例、V3-A 单样本推理 |
-| [simulation](simulation/) | Step 3-B 采集、训练、闭环和恢复脚本的原运行快照 |
-| [benchmarks](benchmarks/) | 开发集及 L1–L4 冻结场景的标识清单 |
-| [docs](docs/) | 实验口径、指标与模型输入输出演示 |
+| 了解项目方案、阶段进度、指标与实验结果 | [项目方案与进展](docs/experiments.md) |
+| 了解 V3-A 结构、张量、BBox 与动作输出，或跑离线推理 | [V3-A 模型说明](docs/model-v3a.md) |
+| 查有哪些物体、抓取部位、障碍与已验收数据 | [数据清单](docs/datasets.md) |
+| 复用 HDF5、划分数据、接入自己的模型 | [数据管线与换模型指南](docs/data-pipeline.md) |
+| 跑专家示教、原始指令回放或维护批量任务 | [专家采集与仿真操作](simulation/README.md) |
 
-仓库收录源码、说明与小型演示文件。轨迹、模型权重、仿真资产、设备校准和运行日志从原数据盘单独取得。
+## 本地快速检查
 
-## 快速开始
-
-Python 3.10 或更新版本。数据安装仅需要 NumPy 和 h5py。
+Python 3.10 或更新版本。数据模块使用 NumPy 和 h5py。以下检查使用合成 HDF5，无需仿真器或项目权重。
 
 ```bash
 python -m pip install -e ".[test]"
 python -m pytest
+g1d-data --help
 ```
 
-### 1. 将采集清单转为相对路径
+如果拿到项目真实数据，先按 [数据管线指南](docs/data-pipeline.md) 导入清单。用 [train_custom.py](examples/train_custom.py) 验证新模型能取数据、计算带掩码的损失并更新参数。用 [predict_v3a.py](examples/predict_v3a.py) 读取已有项目检查点并打印一次前向的 8 步动作。
 
-```bash
-g1d-data import-manifest /path/to/original/runs/tier1_v3_01/training_split.json \
-  data/train.json --source-root /path/to/original
-
-g1d-data audit data/train.json --data-root /path/to/original \
-  --protected benchmarks/development_identity.json \
-  --protected benchmarks/l1_l4_identity.json
-```
-
-`--source-root` 是源 HDF5 路径共同所在的目录。导入只转换清单，源 HDF5 与清单原有分区保持不变。迁移数据后在 `--data-root` 指定保存同一相对目录结构的新位置。Windows 可以将上述命令写成单行执行。
-
-`audit` 校验 HDF5 SHA-256、20 Hz 对齐、三路无损图像、接近和闭爪标签、600 Hz 原生指令衔接、数据身份及已记录的分区防泄漏字段。若某些旧条目缺少网格哈希，结果中的 `training_rows_with_mesh_hash` 会显示校验覆盖范围。旧样本重新编号后，以正式清单的轨迹和场景 ID 为准，由 case_id、物体、部位、步数和 HDF5 哈希绑定原档。archive_id_aliases 统计重新编号的条数。
-
-新采集清单中待分配的组可用以下命令处理。已经划分的组沿用原归属，剩余组按固定随机种子和组粒度分配，实际比例受组大小影响。
-
-```bash
-g1d-data split data/collection.json data/train.json --validation-fraction 0.20 --seed 33889
-g1d-data inspect data/train.json --data-root /path/to/original --split train --index 0
-```
-
-Step 3-B 完成后，直接导入其输出的 `runs/step3b_01/training_split.json`，保留 Tier-2 正式实验分区。
-
-### 2. 给新模型加载数据
-
-```python
-from g1d_grasp.data import WindowDataset, load_manifest
-
-manifest = load_manifest("data/train.json")
-train = WindowDataset(manifest, "/path/to/original", split="train", horizon=8, history=2)
-sample = train[0]
-print(sample["rgb"]["head"].shape)   # (224, 224, 3)
-print(sample["actions"].shape)      # (8, 8)
-print(sample["action_mask"])         # True 对应可监督的目标动作
-```
-
-| 字段 | 形状或含义 |
-| --- | --- |
-| `rgb` | 当前观测的 `head`、`left_wrist`、`right_wrist`，各 `224×224×3`、uint8 |
-| `prompt.bbox`、`prompt.point` | 首帧归一化 `[x1,y1,x2,y2]` 和 `[u,v]` |
-| `history` | 最近 H 帧的关节（rad）、夹爪开口（m）、末端位姿（XYZ 与 xyzw）和控制步 |
-| `actions` | `K×8` 未来动作，7 个绝对关节角目标（rad）与 1 个夹爪开口目标（m） |
-| `action_mask`、`close_mask` | 有效动作及其中的闭爪动作，形状均为 `K` |
-| `episode_id`、`observation_step`、`timestamp_s` | 源轨迹身份、当前控制步和时间戳 |
-
-前缀历史不足时用首帧补齐。未来窗口在最后一个闭爪动作结束，后续填零并由掩码排除。训练和验证分别创建数据集。归一化统计量在训练集拟合后可用于两者。
-
-模型只需根据样本生成 `[B,K,8]` 目标或提供自己的动作适配层。损失计算应使用 `action_mask` 排除填充，可按 `close_mask` 调节闭爪权重。[最小训练示例](examples/train_custom.py) 演示了前向、掩码与反向更新。
-
-```bash
-python -m pip install -e ".[v3a]"
-python examples/train_custom.py data/train.json --data-root /path/to/original --max-batches 4
-```
-
-### 3. 用原 V3-A 检查点做基线对照
-
-V3-A 使用头部 RGB、BBox 掩码、抓取点热图和双腕 RGB。参考适配器保持原检查点的三路编码、两帧 17 维机器人状态及动作反归一化。
-
-```bash
-python examples/predict_v3a.py data/train.json /path/to/last.pt \
-  --data-root /path/to/original --split validation --index 0 --device cpu
-```
-
-命令输出一次前向的 8 步关节目标与夹爪开口。正式闭环的时序融合、统一试提和 Part Hit 判定位于仿真代码中。
-
-## 实验入口
-
-当前基线和冻结清单的口径见 [实验说明](docs/experiments.md)。原始控制器入口及外部 Isaac Sim 依赖见 [仿真运行说明](simulation/README.md)。
-
-- [模型输入和输出 HTML](docs/demos/model-io.html) 可下载后离线打开。绿色 BBox 固定，选择杯身或杯柄查看真实预测。
-- [模型输入和输出 MP4](docs/demos/model-io.mp4) 演示同一观测上的换点和 8 步动作对照。
+仓库包含源码、基准标识和小型演示。真实 HDF5、模型权重、资产、相机标定及完整场景清单由项目数据盘单独交接。重新采集和闭环评测还需要 [原始 Linux 仿真环境及配套文件](simulation/README.md#运行环境与交接文件)。
