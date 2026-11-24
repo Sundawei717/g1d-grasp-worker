@@ -17,7 +17,7 @@ from step3b_common import (A40, DEV, FROZEN, FROZEN_SHA, NAME, PAUSE, PYTHON, RO
 TMUX = ["tmux", "-L", "g1d-step3b"]
 LOG = RUNS / f"{NAME}.log"
 SOURCES = ("step3b_common.py","step3b_control.py","step3b_collect.py","step3b_train.py","step3b_eval.py",
-           "step2_dev.py","lab_school_probe.py","run_lab_school.sh")
+           "step2_dev.py","lab_school_probe.py","unified_grasp.py","run_lab_school.sh")
 
 
 def source_shas():
@@ -103,7 +103,8 @@ def preflight():
     from lab_school_probe import load_grouped
     from step2_dev import CONFIG, template
     from unified_grasp import CONTROL_HZ, EPISODE_STEPS, HOLD_STEPS, LIFT_HEIGHT_M
-    assert (CONTROL_HZ, EPISODE_STEPS, HOLD_STEPS, LIFT_HEIGHT_M, LiftGateConfig().close_threshold_m) == (20,300,11,.08,.071)
+    legacy_gate = LiftGateConfig(gripper_mode="legacy")
+    assert (CONTROL_HZ, EPISODE_STEPS, HOLD_STEPS, LIFT_HEIGHT_M, legacy_gate.close_threshold_m) == (20,300,11,.08,.071)
 
     def validate_grouped(manifest_file, row, doc, phase, policy=None):
         g=manifest_file.parent
@@ -114,7 +115,7 @@ def preflight():
         man={**template(),"phase":phase,"asset":row["target_usd"],"asset_role":row["asset_role"],
              "three_view":True,"target_query":"mug","total_steps":EPISODE_STEPS,
              "fixture_assets":{f["name"]:f["usd"] for f in row["fixtures"]},"cases":[spec],
-             "unified_lift_gate":asdict(LiftGateConfig())}
+             "unified_lift_gate":asdict(legacy_gate)}
         if policy:
             man.update(policy=policy, detector=None, initial_head_prompts={row["case_id"]:row["head_prompt"]})
         save(manifest_file,man)

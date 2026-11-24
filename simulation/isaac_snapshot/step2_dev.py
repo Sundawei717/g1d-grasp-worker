@@ -74,7 +74,12 @@ def adopt(job):
         time.sleep(10)
 
 
-def simulate(stage, rows, phase, *, policy=None, detector=None, prompts=None, archives=None, preferred=2, exclude=(), lanes=None, resume_completed=False, allocator=None, max_shard_cases=None, retries=3):
+def simulate(stage, rows, phase, *, policy=None, detector=None, prompts=None, archives=None, preferred=2, exclude=(),
+             lanes=None, resume_completed=False, allocator=None, max_shard_cases=None, retries=3,
+             fixture_physics="kinematic", gripper_mode="legacy"):
+    if fixture_physics not in {"kinematic", "dynamic"}:
+        raise ValueError(f"Unknown fixture physics: {fixture_physics}")
+    lift_gate = LiftGateConfig(gripper_mode=gripper_mode)
     plans = WORK / "sim"
     plans.mkdir(exist_ok=True)
     buckets = defaultdict(list)
@@ -102,6 +107,8 @@ def simulate(stage, rows, phase, *, policy=None, detector=None, prompts=None, ar
             case_id = row["case_id"]
             original = read(row["plan"])
             name = f"{case_id}.json"
+            if fixture_physics == "dynamic":
+                original["case"] = {**original["case"], "fixture_physics": fixture_physics}
             write_json(folder / name, original)
             spec = dict(row, plan=name, offline_feasible=True)
             if archives:
@@ -111,8 +118,8 @@ def simulate(stage, rows, phase, *, policy=None, detector=None, prompts=None, ar
         write_json(cfg, dict(read(CONFIG), target_usd=usd))
         manifest = {**template(), "phase": phase, "asset": usd, "asset_role": role, "three_view": True,
                     "target_query": subset[0].get("target_query") or QUERIES[role], "total_steps": EPISODE_STEPS,
-                    "fixture_assets": dict(fixtures), "cases": definitions,
-                    "unified_lift_gate": asdict(LiftGateConfig()),
+                    "fixture_assets": dict(fixtures), "fixture_physics": fixture_physics, "cases": definitions,
+                    "unified_lift_gate": asdict(lift_gate),
                     "initial_head_prompts": {r["case_id"]: prompts[r["case_id"]] for r in subset} if prompts else {}}
         if policy:
             manifest.update(policy=policy, detector=detector)
@@ -130,8 +137,10 @@ def simulate(stage, rows, phase, *, policy=None, detector=None, prompts=None, ar
             if not receipt.is_file():
                 return
             summary = read(receipt)
-            if summary["phase"] != phase or summary["asset_usd"] != usd:
-                raise ValueError(f"Unexpected shard identity in {receipt}")
+            if (summary["phase"] != phase or summary["asset_usd"] != usd
+                    or summary.get("fixture_physics", "kinematic") != fixture_physics
+                    or summary.get("gripper_mode", "legacy") != gripper_mode):
+                raise ValueError(f"Unexpected shard identity or execution settings in {receipt}")
             new = []
             for row in summary["cases"]:
                 case = row["case"]

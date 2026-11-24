@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import deque
 from dataclasses import asdict, dataclass
 import math
@@ -11,6 +13,9 @@ EPISODE_STEPS = 300
 LIFT_STEPS = 16
 HOLD_STEPS = 11
 LIFT_HEIGHT_M = 0.080
+JAW_MIN_M = 0.00107
+JAW_MAX_M = 0.09007
+_WIDTH_EPS_M = 1e-8
 
 
 @dataclass(frozen=True)
@@ -24,29 +29,68 @@ class LiftGateConfig:
     jaw_delta_m: float = 0.0005
     min_pad_force_n: float = 5.0
     mechanical_close_m: float = 0.002
-    min_closing_reserve_m: float = 0.006
+    min_closing_reserve_m: float | None = None
+    gripper_mode: str = "adaptive"
+    close_intent_margin_m: float = 0.0005
+    gripper_slew_m: float = 0.004
+    max_preload_error_m: float = 0.009
 
     def __post_init__(self):
-        positive = {k: v for k, v in asdict(self).items() if k != "min_closing_reserve_m"}
+        if self.gripper_mode not in {"legacy", "adaptive"}:
+            raise ValueError(f"Unknown gripper control mode: {self.gripper_mode}")
+        if self.min_closing_reserve_m is None:
+            reserve = 0.006 if self.gripper_mode == "legacy" else 0.002
+            object.__setattr__(self, "min_closing_reserve_m", reserve)
+        positive = {k: v for k, v in asdict(self).items()
+                    if k not in {"min_closing_reserve_m", "gripper_mode"}}
         if (any(not math.isfinite(value) or value <= 0 for value in positive.values())
                 or not math.isfinite(self.min_closing_reserve_m) or self.min_closing_reserve_m < 0):
             raise ValueError("Trial lift thresholds must be finite and positive")
+        if self.gripper_mode == "adaptive" and (
+                max(self.min_closing_reserve_m, self.close_intent_margin_m) > self.max_preload_error_m):
+            raise ValueError("Closing requirements must be reachable within the preload limit")
 
 
 def ticks(seconds):
     return math.ceil(seconds * CONTROL_HZ - 1e-9)
 
 
+def _has_bilateral_load(forces, minimum):
+    return all(forces.get(pad, 0.0) >= minimum for pad in ("pad_1", "pad_2"))
+
+
+def _remaining_closing_travel(width):
+    return max(0.0, width - JAW_MIN_M)
+
+
 def guarded_gripper_width(requested, observed, previous, pad_forces, config):
-    """Apply the normal slew guard, with bounded preloading against measured contact."""
-    lower, upper = observed - 0.004, observed + 0.004
-    if config.min_closing_reserve_m and requested <= previous:
-        if min(pad_forces.get(pad, 0.0) for pad in ("pad_1", "pad_2")) >= config.min_pad_force_n:
-            lower = max(previous - 0.004, observed - config.min_closing_reserve_m - 0.003)
-            upper = max(lower, previous + 0.004)
+    """Bound position error and move the issued aperture smoothly between control ticks."""
+    loaded = _has_bilateral_load(pad_forces, config.min_pad_force_n)
+    if config.gripper_mode == "legacy":
+        lower, upper = observed - 0.004, observed + 0.004
+        if config.min_closing_reserve_m and requested <= previous:
+            if loaded:
+                lower = max(previous - 0.004, observed - config.min_closing_reserve_m - 0.003)
+                upper = max(lower, previous + 0.004)
+            else:
+                lower = min(lower, previous)
+        return float(np.clip(np.clip(requested, lower, upper), JAW_MIN_M, JAW_MAX_M))
+
+    slew = config.gripper_slew_m
+    previous = float(np.clip(previous, JAW_MIN_M, JAW_MAX_M))
+    lower = observed - slew
+    room = _remaining_closing_travel(observed)
+    intent_margin = min(config.close_intent_margin_m, room / 2)
+    if requested < observed - intent_margin:
+        preload_floor = observed - config.max_preload_error_m
+        if loaded:
+            lower = min(lower, preload_floor)
         else:
-            lower = min(lower, previous)
-    return float(np.clip(np.clip(requested, lower, upper), 0.00107, 0.09007))
+            # A brief force dropout may preserve existing preload but must not increase it.
+            lower = min(lower, max(preload_floor, previous))
+    goal = float(np.clip(requested, lower, observed + slew))
+    limited = np.clip(goal, previous - slew, previous + slew)
+    return float(np.clip(limited, JAW_MIN_M, JAW_MAX_M))
 
 
 class LiftGate:
@@ -60,15 +104,28 @@ class LiftGate:
         c = self.config
         before = self.history[-1]
         self.history.append(feedback)
-        self.closed = self.closed + 1 if width_command <= c.close_threshold_m else 0
-        delta = abs(feedback["width_m"] - before["width_m"])
+        observed = feedback["width_m"]
+        delta = abs(observed - before["width_m"])
         forces = feedback["pad_normal_force_n"]
-        load = min(forces.get(pad, 0.0) for pad in ("pad_1", "pad_2")) >= c.min_pad_force_n
-        at_limit = feedback["width_m"] <= c.mechanical_close_m
-        reserve = feedback["width_m"] - width_command
-        loaded = load and (c.min_closing_reserve_m == 0 or reserve >= c.min_closing_reserve_m)
+        load = _has_bilateral_load(forces, c.min_pad_force_n)
+        at_limit = observed <= c.mechanical_close_m
+        reserve = observed - width_command
         empty_at_limit = at_limit and not any(force > 0 for force in forces.values())
-        stable = delta < c.jaw_delta_m and (loaded or empty_at_limit)
+        required_reserve = c.min_closing_reserve_m
+        if c.gripper_mode == "legacy":
+            closing = width_command <= c.close_threshold_m
+            loaded = load and (required_reserve == 0 or reserve >= required_reserve)
+            stable = delta < c.jaw_delta_m and (loaded or empty_at_limit)
+        else:
+            room = _remaining_closing_travel(observed)
+            required_reserve = min(required_reserve, room / 2)
+            intent_margin = min(c.close_intent_margin_m, room / 2)
+            pressing = reserve > _WIDTH_EPS_M and reserve + _WIDTH_EPS_M >= intent_margin
+            loaded_at_stop = load and room <= _WIDTH_EPS_M and width_command <= JAW_MIN_M + _WIDTH_EPS_M
+            closing = pressing or loaded_at_stop
+            loaded = load and closing and (loaded_at_stop or reserve + _WIDTH_EPS_M >= required_reserve)
+            stable = delta < c.jaw_delta_m and loaded
+        self.closed = self.closed + 1 if closing else 0
         self.stable = self.stable + 1 if stable and self.closed else 0
         positions = np.array([item["eef_xyz_m"] for item in self.history])
         displacement = float(np.linalg.norm(positions - positions[0], axis=1).max())
@@ -80,7 +137,8 @@ class LiftGate:
         return {**flags, "ready": all(flags.values()), "width_command_m": float(width_command),
                 "width_actual_m": feedback["width_m"], "jaw_delta_m": delta, "close_steps": self.closed,
                 "jaw_stable_steps": self.stable, "arm_displacement_m": displacement,
-                "closing_reserve_m": reserve, "target_load_ready": loaded,
+                "closing_reserve_m": reserve, "required_closing_reserve_m": required_reserve,
+                "closing_intent": closing, "target_load_ready": loaded,
                 "max_joint_speed_rad_s": speed, "pad_normal_force_n": forces, "at_mechanical_limit": at_limit,
                 "empty_at_mechanical_limit": empty_at_limit}
 

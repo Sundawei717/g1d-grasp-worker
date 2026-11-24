@@ -72,6 +72,7 @@ def run(config, output, samples, grasp=False, plan=None, admission=None):
         target_asset = RigidObject(RigidObjectCfg(prim_path=rigid_paths[0]))
         obstacle_paths = []
         grouped_fixtures = {}
+        dynamic_fixtures = admission is not None and admission.get("fixture_physics") == "dynamic"
         if admission and admission.get("fixture_assets"):
             fixtures = [{"name": name, "usd": asset, "pose": [4.0 + 0.6 * index, 0, 0.5, 0, 0, 0, 1]}
                         for index, (name, asset) in enumerate(sorted(admission["fixture_assets"].items()))]
@@ -87,7 +88,7 @@ def run(config, output, samples, grasp=False, plan=None, admission=None):
             bodies = [prim for prim in Usd.PrimRange(actor.GetPrim()) if prim.HasAPI(UsdPhysics.RigidBodyAPI)]
             if len(bodies) != 1:
                 raise RuntimeError("Expected one physical body for the configured blocker")
-            UsdPhysics.RigidBodyAPI(bodies[0]).CreateKinematicEnabledAttr().Set(True)
+            UsdPhysics.RigidBodyAPI(bodies[0]).CreateKinematicEnabledAttr().Set(not dynamic_fixtures)
             obstacle_paths.append(str(bodies[0].GetPath()))
             if admission and admission.get("fixture_assets"):
                 grouped_fixtures[obstacle["name"]] = (
@@ -272,8 +273,9 @@ def run(config, output, samples, grasp=False, plan=None, admission=None):
                     actual = np.asarray(rigid.data.root_link_pose_w[0].tolist())
                     expected = np.asarray(entry["pose"])
                     angle = (Rotation.from_quat(actual[3:]).inv() * Rotation.from_quat(expected[3:])).magnitude()
-                    if np.linalg.norm(actual[:3] - expected[:3]) > 0.001 or angle > 0.003:
-                        raise RuntimeError(f"Fixture {name} did not bind to the frozen pose")
+                    max_offset, max_angle = (0.0025, math.radians(2.5)) if dynamic_fixtures else (0.001, 0.003)
+                    if np.linalg.norm(actual[:3] - expected[:3]) > max_offset or angle > max_angle:
+                        raise RuntimeError(f"Fixture {name} did not settle within its planned initial pose")
                     fixture_paths.append(path)
                 prompt = visible_prompt(head, left_audit, initial, target_box, rigid_paths[0], truth["segmentation"],
                                         truth["depth"], visible_fixtures=fixture_paths, grasp_part=grasp_part,
@@ -323,7 +325,12 @@ def run(config, output, samples, grasp=False, plan=None, admission=None):
                 from vertical_lift import checked_lift
                 from unified_grasp import LIFT_HEIGHT_M
 
-                return checked_lift(config, lift_model["urdf"], lift_evidence, tuple(active_fixtures.values()),
+                obstacles = tuple(active_fixtures.values())
+                if dynamic_fixtures:
+                    live = fixture_feedback()
+                    obstacles = tuple({**entry, "pose": live[name].tolist()}
+                                      for name, entry in active_fixtures.items())
+                return checked_lift(config, lift_model["urdf"], lift_evidence, obstacles,
                                     q, wrist, fingers,
                                     height_m=LIFT_HEIGHT_M if unified_lift_gate is not None else 0.030)
 
@@ -371,7 +378,9 @@ def run(config, output, samples, grasp=False, plan=None, admission=None):
             cases = []
             aggregate = {"scope": "single-asset fixed-layout right-arm trial batch", "cases": cases}
             phase = admission["phase"]
-            aggregate.update(phase=phase, asset_usd=config["target_usd"], required=admission["required"])
+            aggregate.update(phase=phase, asset_usd=config["target_usd"], required=admission["required"],
+                             fixture_physics=admission.get("fixture_physics", "kinematic"),
+                             gripper_mode=admission.get("unified_lift_gate", {}).get("gripper_mode", "legacy"))
             metadata = admission.get("case_metadata", {})
             for case_id, candidate in admission["cases"]:
                 directory = output / case_id
@@ -715,6 +724,10 @@ def load_grouped(config, path):
     if not 1 <= len(ids) <= max_cases or len(set(ids)) != len(ids) or any(not re.fullmatch(id_pattern, key) for key in ids):
         raise SystemExit("Bad grouped case IDs")
     fixture_assets = manifest["fixture_assets"]
+    fixture_physics = manifest.get("fixture_physics", "kinematic")
+    if fixture_physics not in {"kinematic", "dynamic"} or (
+            fixture_physics == "dynamic" and phase not in {"three_view_expert_v3", "three_view_unified_replay"}):
+        raise ValueError("Dynamic fixtures are supported for V3 expert recording and native replay")
     if not set(fixture_assets) <= {"neighbor", "blocker"}:
         raise SystemExit("Unexpected grouped fixture slot")
     plans = []
@@ -725,6 +738,10 @@ def load_grouped(config, path):
         if bool(candidate) != case["offline_feasible"]:
             raise SystemExit("Grouped offline feasibility flag mismatches its plan")
         if candidate:
+            if candidate["case"].get("fixture_physics", "kinematic") != fixture_physics:
+                raise ValueError("Expert plan and shard disagree on fixture physics")
+            if fixture_physics == "dynamic" and {f["name"] for f in candidate["obstacles"]} != set(fixture_assets):
+                raise ValueError("All dynamic fixtures must have an initial placement in each case")
             case_fields = ("case_id", "seed", "target_pose_xyz_xyzw", "home_q", "fixtures", "group", "part")
             if "lift_height_m" in case:
                 case_fields += ("lift_height_m",)
@@ -751,7 +768,8 @@ def load_grouped(config, path):
                 candidate["initial_head_prompt"] = manifest.get("initial_head_prompts", {}).get(case["case_id"])
         plans.append((case["case_id"], candidate))
     result = {"phase": phase, "required": 0, "cases": plans,
-              "fixture_assets": fixture_assets, "case_metadata": {case["case_id"]: case for case in cases}}
+              "fixture_assets": fixture_assets, "fixture_physics": fixture_physics,
+              "case_metadata": {case["case_id"]: case for case in cases}}
     if manifest.get("three_view"):
         if not manifest.get("target_query"):
             raise ValueError("Three-view grouped tests need a target query")
@@ -772,7 +790,18 @@ def load_grouped(config, path):
 
         if manifest["total_steps"] != EPISODE_STEPS:
             raise ValueError("Unified execution reserves exactly 300 total control steps")
-        result.update(unified_lift_gate=asdict(LiftGateConfig()), lift_model=manifest["lift_model"])
+        submitted = manifest.get("unified_lift_gate", {})
+        gate = (LiftGateConfig(**submitted) if "gripper_mode" in submitted
+                else LiftGateConfig(gripper_mode="legacy"))
+        for _, candidate in plans:
+            if candidate is None:
+                continue
+            case = candidate["case"]
+            if case.get("gripper_mode", gate.gripper_mode) != gate.gripper_mode:
+                raise ValueError("Expert plan and shard disagree on gripper control mode")
+            if gate.gripper_mode == "adaptive":
+                case["gripper_mode"] = gate.gripper_mode
+        result.update(unified_lift_gate=asdict(gate), lift_model=manifest["lift_model"])
     if phase == "fit20_closed_loop":
         from policy_rollout import PROMPT_MODES
 

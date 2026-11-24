@@ -14,6 +14,9 @@
 | [step3b_train.py](step3b_train.py) | 80 轮无放回优化、梯度累积和 DDP、检查点、续训与损失曲线。 |
 | [step3b_eval.py](step3b_eval.py) | 用开发集选终选权重、跑冻结终榜和输出报告。 |
 | [background_status.py](background_status.py) | 查看后台运行、退出码及完成标志。 |
+| [eval_gripper_repair.py](eval_gripper_repair.py) | 固定 A40 last 与 28 个开发场景，显式用 adaptive 夹爪复测、核对输入版本、续跑并生成对照报告。 |
+| [audit_gripper_repair.py](audit_gripper_repair.py) | 审计上述复测的下发开口跳变、试提与失握物理轨迹。 |
+| [report_gripper_repair.py](report_gripper_repair.py) | 生成 2026-11-24 固定复测的中文报告与 28 场 CSV；不是任意实验的通用报告入口。 |
 
 ## 仿真、执行器和数据底层
 

@@ -314,6 +314,8 @@ def save_progress(receipts):
 
 
 def run_batch(batch, short=False):
+    fixture_physics = batch.get("fixture_physics", "kinematic")
+    gripper_mode = batch.get("gripper_mode", "legacy")
     prepared = batch["prepared"]
     rows = [r for p in prepared for r in p["rows"]]
     if not rows:
@@ -323,7 +325,7 @@ def run_batch(batch, short=False):
     alloc = Resources()
     demos = step2_dev.simulate(f"{stamp}_record", rows, "three_view_expert_v3",
                               resume_completed=True, allocator=alloc, max_shard_cases=2 if short else 5,
-                              retries=64)
+                              retries=64, fixture_physics=fixture_physics, gripper_mode=gripper_mode)
     admitted, failures = {}, []
     for row in rows:
         cid = row["case_id"]
@@ -347,7 +349,8 @@ def run_batch(batch, short=False):
         eligible.append(group)
     replays = step2_dev.simulate(f"{stamp}_replay", [r for p in eligible for r in p["rows"]],
                                 "three_view_unified_replay", archives=admitted, resume_completed=True,
-                                allocator=alloc, max_shard_cases=2 if short else 5, retries=64)
+                                allocator=alloc, max_shard_cases=2 if short else 5, retries=64,
+                                fixture_physics=fixture_physics, gripper_mode=gripper_mode)
     receipts = []
     for group in eligible:
         proof = []
@@ -356,7 +359,9 @@ def run_batch(batch, short=False):
             _, diag, path = replays[cid]
             if replay_ok(diag):
                 proof.append({**admitted[cid], "seed": r["seed"], "layout_signature": r["layout_signature"],
-                              "base_mesh_hash": r["base_mesh_hash"], "replay_diagnostic": path,
+                              "base_mesh_hash": r["base_mesh_hash"], "fixture_physics": fixture_physics,
+                              "gripper_mode": gripper_mode,
+                              "replay_diagnostic": path,
                               "replay_sha256": sha256(path), "replay_verified": True})
             else:
                 trial = (diag.get("policy_rollout", {}).get("trials") or [{}])[0]
@@ -440,6 +445,13 @@ def collect():
     if len(done) != len(receipts):
         raise ValueError("Duplicate accepted group")
     save_progress(receipts)
+    physics = read(WORK / "fixture_physics.json", {})
+    dynamic_from = physics.get("dynamic_from_batch")
+    if dynamic_from is not None and (type(dynamic_from) is not int or dynamic_from < 0):
+        raise ValueError("dynamic_from_batch must be a nonnegative batch index")
+    adaptive_from = read(WORK / "gripper_gate.json", {}).get("adaptive_from_batch")
+    if adaptive_from is not None and (type(adaptive_from) is not int or adaptive_from < 0):
+        raise ValueError("adaptive_from_batch must be a nonnegative batch index")
     tries = Counter()
     waiting = []
     logs = sorted((COLLECT / "batches").glob("batch_*.json"))
@@ -472,10 +484,15 @@ def collect():
                         prepared.append(p)
                     tries[t["id"]] += 1
                 path = COLLECT / "batches" / f"batch_{next_id:04}.json"
-                batch = {"id": next_id, "tasks": chosen, "prepared": prepared}
+                fixture_physics = "dynamic" if dynamic_from is not None and next_id >= dynamic_from else "kinematic"
+                gripper_mode = "adaptive" if adaptive_from is not None and next_id >= adaptive_from else "legacy"
+                batch = {"id": next_id, "tasks": chosen, "prepared": prepared, "fixture_physics": fixture_physics,
+                         "gripper_mode": gripper_mode}
                 save(path,batch)
                 next_id += 1
-            print(f"Batch {batch['id']} planned {len(batch['prepared'])}/{len(batch['tasks'])} groups", flush=True)
+            print(f"Batch {batch['id']} planned {len(batch['prepared'])}/{len(batch['tasks'])} groups; "
+                  f"fixture physics {batch.get('fixture_physics', 'kinematic')}, "
+                  f"gripper control {batch.get('gripper_mode', 'legacy')}", flush=True)
             check_pause()
             additions, failures = run_batch(batch, short=batch["id"] == 0)
             additions = [p for p in additions if p["task"]["id"] not in done]
