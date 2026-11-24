@@ -2,6 +2,7 @@
 
 [专家采集入门](../README.md) · [仿真进阶操作](../operations.md)
 
+
 以下按用途定位快照源文件。部署条件和现行运行命令在上面的指南。历史入口依赖各自的旧版清单和回执。
 
 ## 现行扩采、训练与评测
@@ -13,6 +14,7 @@
 | [step3b_collect.py](step3b_collect.py) | 分配新场景、生成专家计划、录制回放及验收合库。 |
 | [step3b_train.py](step3b_train.py) | 80 轮无放回优化、梯度累积和 DDP、检查点、续训与损失曲线。 |
 | [step3b_eval.py](step3b_eval.py) | 用开发集选终选权重、跑冻结终榜和输出报告。 |
+| [evaluation_contract.py](evaluation_contract.py) | 绑定评测执行器、计划、提示、标定与资产版本，拒绝复用不匹配的成绩，并区分未执行抬升与实际试提失败。 |
 | [background_status.py](background_status.py) | 查看后台运行、退出码及完成标志。 |
 | [eval_gripper_repair.py](eval_gripper_repair.py) | 固定 A40 last 与 28 个开发场景，显式用 adaptive 夹爪复测、核对输入版本、续跑并生成对照报告。 |
 | [audit_gripper_repair.py](audit_gripper_repair.py) | 审计上述复测的下发开口跳变、试提与失握物理轨迹。 |
@@ -176,3 +178,42 @@
 | [run_fit20_corrected.sh](run_fit20_corrected.sh) | 运行使用纠正样本的 Fit20 试验。 |
 | [run_fit20_occlusion_retrain.sh](run_fit20_occlusion_retrain.sh) | 运行早期遮挡口径重训对照。 |
 | [run_fit20_residual.sh](run_fit20_residual.sh) | 运行早期残差策略试验。 |
+
+## 2026-11-24 补齐的准备、诊断与历史脚本
+
+这些文件随服务器源码一并归档。旧实验启动脚本绑定各自的运行目录和配置；日常采集、训练和评测仍从本页第一节的现行入口开始。归档 `test_*.py` 不属于仓库默认的 `tests/` 测试集。
+
+| 文件 | 职责 |
+| --- | --- |
+| [audit_existing_20261124.py](audit_existing_20261124.py) | 2026-11-24 固定审查：读取数据元信息和两版 A40 日志，不训练或启动仿真。 |
+| [build_asset_manifest.py](build_asset_manifest.py) | 汇总资产依赖、基础网格和物理准入回执。 |
+| [prepare_admission.py](prepare_admission.py) | 准备早期专家抓取准入计划。 |
+| [prepare_assets.py](prepare_assets.py) | 静态检查资产尺寸、刚体、碰撞体、质量和 USD 依赖。 |
+| [profile_v3_forward.py](profile_v3_forward.py) | 测量网络前向耗时与显存；需相应 PyTorch/CUDA 环境。 |
+| [prune_completed_kit_cache.py](prune_completed_kit_cache.py) | 检查已完成进程的 Kit 缓存；默认只列出，显式 --apply 才清理。 |
+| [review_admission.py](review_admission.py) | 复核资产抓取准入结果。 |
+| [step1_audit.py](step1_audit.py) | 审查 Step 1 相机、动作、检测和抬升接口。 |
+| [step1_mug_asset.py](step1_mug_asset.py) | 杯子碰撞凸分解与把手孔洞物理验证。 |
+| [test_background_status.py](test_background_status.py) | 归档测试：后台状态和完成标志。 |
+| [test_chunk_model.py](test_chunk_model.py) | 归档测试：动作块网络结构和损失。 |
+| [test_dataset_contract.py](test_dataset_contract.py) | 归档测试：原始数据约定。 |
+| [test_prompt_views.py](test_prompt_views.py) | 归档测试：提示图像和坐标。 |
+| [test_strict_grasp.py](test_strict_grasp.py) | 归档测试：物理抓取判分。 |
+| [test_unified_grasp.py](test_unified_grasp.py) | 归档测试：旧版统一执行器约定；当前回归见仓库根目录 tests/。 |
+| [test_v3_final.py](test_v3_final.py) | 归档测试：V3-Final 输入、网格和监督；依赖相应实验环境。 |
+| [tier1_finalize.py](tier1_finalize.py) | 第一批数据合库、切分与历史 B 组检测缓存收尾；Tier-2 V3-A 不用检测缓存。 |
+| [v3_a_audit.py](v3_a_audit.py) | 旧 V3-A 训推一致性、开环、提示交换和黑屏诊断。 |
+| [v3_a_audit_live.py](v3_a_audit_live.py) | 在实际仿真策略前向处抓取输入张量。 |
+| [verify_detour.py](verify_detour.py) | 验证专家绕行路径的几何与碰撞检查。 |
+| [continue_admission.sh](continue_admission.sh) | 历史资产准入批次续跑入口。 |
+| [continue_after_support_audit.sh](continue_after_support_audit.sh) | 历史支撑状态审查后的准入续跑入口。 |
+| [continue_can_admission.sh](continue_can_admission.sh) | 历史罐类资产准入续跑入口。 |
+| [finish_asset_diagnostics.sh](finish_asset_diagnostics.sh) | 历史资产诊断收尾入口。 |
+| [hold_legacy_gpu.sh](hold_legacy_gpu.sh) | 历史一次性 GPU 协调锁脚本，不属于当前总控，也不要作为新任务启动入口。 |
+| [resume_step3a_l1.sh](resume_step3a_l1.sh) | 恢复早期 Step 3-A 的 L1 专家验真任务。 |
+| [run_inspection.sh](run_inspection.sh) | 在原仿真环境启动环境与相机检查。 |
+| [run_step2_train.sh](run_step2_train.sh) | 早期 2,000 步 A/B 训练包装；当前正式训练使用 step3b_train.py。 |
+| [run_v3_a_audit_sim.sh](run_v3_a_audit_sim.sh) | 启动早期 V3-A 在线张量审计。 |
+| [run_v3_a_micro_train.sh](run_v3_a_micro_train.sh) | 早期非配对/提示微实验训练包装。 |
+
+当前数采/评测所依赖的五个 `projects.g1d_rsi` 模块另见 [相机与仿真桥接源码](../runtime/README.md)。

@@ -20,6 +20,8 @@ class TemporalActions:
             self.chunks.popleft()
         self.chunks.append((tick,chunk))
         available = np.stack([values[tick-start] for start,values in self.chunks])
+        # ACT ordering: oldest prediction first. A larger decay favors older chunks;
+        # it must not be interpreted as favoring the newest observation.
         weights = np.exp(-self.decay*np.arange(len(available)))
         self.next_step += 1
         return np.average(available,axis=0,weights=weights), len(available)

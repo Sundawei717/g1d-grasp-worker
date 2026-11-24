@@ -1,5 +1,6 @@
 """Select with development episodes and evaluate the immutable final benchmark."""
 from collections import Counter, defaultdict
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
@@ -11,9 +12,12 @@ from step3b_common import A40, DEV, FROZEN, FROZEN_SHA, RUNS, WORK, Resources, c
 from step3b_train import FIT
 from three_view_detector import sha256
 from three_view_eval import verify_policy
-from unified_grasp import EPISODE_STEPS
+from unified_grasp import CONTROL_HZ, EPISODE_STEPS, HOLD_STEPS, LIFT_HEIGHT_M, LIFT_STEPS, LiftGateConfig
+from evaluation_contract import (EVALUATOR_VERSION, evaluation_contract, fingerprint,
+                                 validate_cached_result, execution_diagnostics)
 
-EVAL = WORK / "evaluation"
+EVAL = WORK / "evaluation" / EVALUATOR_VERSION
+EVAL_GATE = LiftGateConfig(gripper_mode="adaptive")
 
 
 def pinned_inputs():
@@ -83,21 +87,41 @@ def prepared(rows, tag):
 
 def evaluated(rows, tag, policy):
     check_pause()
+    config = read(step2_dev.CONFIG)
+    lift_model = step2_dev.template()["lift_model"]
+    runtime_files = [step2_dev.CONFIG, config["robot_usd"], config["school_usd"], config["camera_config"],
+                     lift_model["urdf"], lift_model["evidence"],
+                     Path(lift_model["urdf"]).with_name("physics_contract.json")]
+    for row in rows:
+        runtime_files.append(row["target_usd"])
+        runtime_files.extend(f["usd"] for f in row["fixtures"])
+        atlas = (row.get("part_meshes") or {}).get("face_atlas")
+        if atlas:
+            runtime_files.append(atlas)
+    contract = evaluation_contract(rows, policy["sha256"], source_root=Path(__file__).resolve().parent,
+        gate_config=asdict(EVAL_GATE), timing={"control_hz":CONTROL_HZ,"episode_steps":EPISODE_STEPS,
+        "lift_height_m":LIFT_HEIGHT_M,"lift_steps":LIFT_STEPS,"hold_steps":HOLD_STEPS,
+        "actions_per_decision":1,"te_decay":.01},runtime_files=runtime_files)
     result = EVAL/f"{tag}.json"
     if result.exists():
         data = read(result)
-        if data["checkpoint_sha256"] == policy["sha256"] and [r["case"] for r in data["episodes"]] == [r["case_id"] for r in rows]:
-            return data["episodes"]
-        raise ValueError(f"Changed policy or evaluation cases after {tag}")
+        return validate_cached_result(data,contract)
     spec = prepared(rows,tag)
     step2_dev.WORK = WORK
     prompts = {r["case_id"]:r["head_prompt"] for r in spec}
-    out = step2_dev.simulate(tag,spec,"three_view_closed_loop",policy=policy,prompts=prompts,detector=None,
-                             resume_completed=True,allocator=Resources(),max_shard_cases=5,retries=64)
+    # A new source/scene contract must not harvest a completed shard from an older run.
+    job_tag = f"{tag}_{fingerprint(contract)[:16]}"
+    out = step2_dev.simulate(job_tag,spec,"three_view_closed_loop",policy=policy,prompts=prompts,detector=None,
+                             resume_completed=True,allocator=Resources(),max_shard_cases=5,retries=64,
+                             fixture_physics="kinematic",gripper_mode=EVAL_GATE.gripper_mode)
     episodes = []
     for row in spec:
         value = out[row["case_id"]]
         item = log_case(row,value,"a")
+        rollout = value[1]["policy_rollout"]
+        if rollout["gate_config"] != asdict(EVAL_GATE):
+            raise ValueError("Closed loop used a different gripper configuration")
+        item["execution_diagnostics"] = execution_diagnostics(rollout)
         if item["diagnostics"]["policy_execution"] != {"actions_per_decision":1,"temporal_decay":.01}:
             raise ValueError("Closed loop used the wrong execution contract")
         decisions = value[1]["policy_rollout"]["decisions"]
@@ -107,7 +131,8 @@ def evaluated(rows, tag, policy):
         item.update(asset_family=row["asset_family"],tier=row.get("tier"),layout=row.get("layout_type"),
                     scene_id=row["scene_id"],pair_group_id=row.get("pair_group_id"))
         episodes.append(item)
-    save(result,{"checkpoint_sha256":policy["sha256"],"episodes":episodes})
+    save(result,{"checkpoint_sha256":policy["sha256"],"episodes":episodes,
+                 "evaluation_contract":contract,"evaluation_contract_sha256":fingerprint(contract)})
     return episodes
 
 
@@ -162,13 +187,18 @@ def update(phase, **data):
     save(p,{**current,**data,"stage":3,"phase":phase,"updated_at":now()})
 
 
-def report(tuning, winner, comparison, *, output=None):
+def report(tuning, winner, comparison, *, output=None, development_anchor=None):
     lines = ["# Tier-2 V3-A 扩量结果", "",
              f"终选第 {winner['epoch']} 轮 {winner['tag']}。开发集按抓起且命中数排序，其次按抓起数、轮次较早排序。",
-             "终榜使用同步 20 Hz、15 秒／300 步、71 mm 门控、8 cm 试提和 0.55 秒悬停，TE exec=1、m=0.01。",
+             "终榜使用同步 20 Hz、15 秒／300 步、adaptive 修复版夹爪门控、8 cm 试提和 0.55 秒悬停，TE exec=1、m=0.01。障碍沿用冻结场景的固定物理设置。",
              f"冻结清单 SHA-256 {FROZEN_SHA}。", "", "## 28 个开发场景选点", "",
              "| 权重 | 轮次 | 抓起 | 抓起且命中 |", "|---|---:|---:|---:|",
-             "| Tier-1 A40 last | 40 | 19/28 | 16/28 |"]
+             ]
+    if development_anchor is not None:
+        n = len(development_anchor)
+        lines.append(f"| Tier-1 A40 last（同版执行器复测） | 40 | {sum(r['status']=='success' for r in development_anchor)}/{n} | {sum(map(joint,development_anchor))}/{n} |")
+    else:
+        lines.append("| Tier-1 A40 last | 40 | 未提供本版复测 | 未提供本版复测 |")
     for x in tuning:
         lines.append(f"| {x['tag']} | {x['epoch']} | {x['success']}/28 | {x['success_and_hit']}/28 |")
     lines += ["","## 冻结 80 任务逐层对照","",
@@ -198,7 +228,8 @@ def report(tuning, winner, comparison, *, output=None):
     unsettled = [r for r in comparison["全部"]["details"]
                  if r["settled_translation_delta_mm"] > 1 or r["settled_rotation_delta_deg"] > 1]
     lines.extend(["",f"两模型复位后目标位姿相差超过 1 mm 或 1° 的场景 {len(unsettled)}/80，逐条误差见分层 JSON。"])
-    lines+=["","[数据盘点](data_report.md) · [80 轮损失曲线](fit/loss_curves.png) · [分层 JSON](evaluation/final_comparison.json)"]
+    lines+=["","lift_failed 的 failure_types 中单独列出 lift_path_rejected（未执行抬升），不等同于抓起后掉落。",
+            "",f"[数据盘点](data_report.md) · [80 轮损失曲线](fit/loss_curves.png) · [分层 JSON](evaluation/{EVALUATOR_VERSION}/final_comparison.json)"]
     output = output or WORK/"final_report.md"
     tmp=output.with_suffix(".tmp")
     tmp.write_text("\n".join(lines)+"\n",encoding="utf-8")
@@ -206,10 +237,11 @@ def report(tuning, winner, comparison, *, output=None):
 
 
 def evaluate():
-    EVAL.mkdir(exist_ok=True)
+    EVAL.mkdir(parents=True,exist_ok=True)
     dev, frozen = pinned_inputs()
     base = binding(A40,"tier1_a40","last")
-    anchor = baseline_dev()
+    # The archived 19/28, 16/28 anchor used legacy control. Re-score A40 fairly.
+    anchor = evaluated(dev,"tier1_a40_dev",base)
     candidates = [binding(FIT,f"tier2_{k}",k) for k in ("epoch_60","last","best_val")]
     unique = {}
     for b in candidates:
@@ -230,7 +262,8 @@ def evaluate():
         tuning.append({**b,"success":sum(r["status"]=="success" for r in rows),"success_and_hit":sum(map(joint,rows))})
     winner = max(tuning,key=lambda r:(r["success_and_hit"],r["success"],-r["epoch"]))
     selection=EVAL/"selection.json"
-    chosen={"winner":winner,"development":tuning,"development_sha256":sha256(DEV)}
+    chosen={"winner":winner,"development":tuning,"development_sha256":sha256(DEV),
+            "evaluator_version":EVALUATOR_VERSION}
     if selection.exists() and read(selection) != chosen:
         raise ValueError("Tier-2 dev pick changed after final benchmark access")
     save(selection,chosen)
@@ -246,5 +279,5 @@ def evaluate():
     final=groups(left,right)
     save(EVAL/"final_comparison.json",{"winner":winner,"frozen_sha256":FROZEN_SHA,
          "strata":final,"tier1":left,"tier2":right})
-    report(tuning,winner,final)
+    report(tuning,winner,final,development_anchor=anchor)
     update("complete",completed_levels=4,frozen_episodes=80,winner=winner,report=str(WORK/"final_report.md"))

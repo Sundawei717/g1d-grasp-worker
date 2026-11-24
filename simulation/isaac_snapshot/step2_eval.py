@@ -152,7 +152,9 @@ def stats(rows):
               "part_assessed": sum(r["part_hit"] is not None for r in rows),
               "failure_types": Counter(r["failure"] for r in rows if r["failure"]),
               "collision": {}, "disturbance": {}, "latency_ms": {}}
-    for phase in ("approach", "close"):
+    # Unified policy runs label all pre-trial commands approach, then lift/hold.
+    # Older expert logs still have close; retain it without discarding trial contact.
+    for phase in ("approach", "close", "lift", "hold"):
         phases = [r["diagnostics"]["collision"].get(phase, {}) for r in rows]
         result["collision"][phase] = {
             "episodes_with_contact": sum(p.get("contact_physics_steps", 0) > 0 for p in phases),

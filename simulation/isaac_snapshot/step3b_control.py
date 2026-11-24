@@ -17,7 +17,13 @@ from step3b_common import (A40, DEV, FROZEN, FROZEN_SHA, NAME, PAUSE, PYTHON, RO
 TMUX = ["tmux", "-L", "g1d-step3b"]
 LOG = RUNS / f"{NAME}.log"
 SOURCES = ("step3b_common.py","step3b_control.py","step3b_collect.py","step3b_train.py","step3b_eval.py",
-           "step2_dev.py","lab_school_probe.py","unified_grasp.py","run_lab_school.sh")
+           "step2_dev.py","lab_school_probe.py","unified_grasp.py","run_lab_school.sh",
+           "evaluation_contract.py","rigid_grasp_probe.py","vertical_lift.py","strict_grasp.py",
+           "school_planner.py","part_surface.py","step2_eval.py","temporal_actions.py",
+           "chunk_model.py","three_view_rollout.py","three_view_inputs.py","three_view_train.py",
+           "v3_prompt_train.py","step1_episode.py","dataset_alignment.py","tier1_collect.py",
+           "episode_store.py","train_policy.py","dataset_contract.py","step3a_planner.py",
+           "step1b_scenes.py","step1_mug_pairs.py","tier1_plan.py","step3a_verify.py")
 
 
 def source_shas():
@@ -115,7 +121,7 @@ def preflight():
         man={**template(),"phase":phase,"asset":row["target_usd"],"asset_role":row["asset_role"],
              "three_view":True,"target_query":"mug","total_steps":EPISODE_STEPS,
              "fixture_assets":{f["name"]:f["usd"] for f in row["fixtures"]},"cases":[spec],
-             "unified_lift_gate":asdict(legacy_gate)}
+             "unified_lift_gate":asdict(LiftGateConfig(gripper_mode="adaptive") if policy else legacy_gate)}
         if policy:
             man.update(policy=policy, detector=None, initial_head_prompts={row["case_id"]:row["head_prompt"]})
         save(manifest_file,man)

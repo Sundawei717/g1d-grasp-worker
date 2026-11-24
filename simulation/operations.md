@@ -10,7 +10,7 @@
 
 | 所需内容 | 使用位置 |
 | --- | --- |
-| 带相机支持的 Isaac Sim 6.0 / Isaac Lab，原 sim60 Python 环境 | `run_lab_school.sh`、`lab_school_probe.py`、训练入口。包含数值计算、Pinocchio 和仿真桥接模块 `projects.g1d_rsi` |
+| 带相机支持的 Isaac Sim 6.0 / Isaac Lab，原 sim60 Python 环境 | `run_lab_school.sh`、`lab_school_probe.py`、训练入口。包含数值计算与 Pinocchio；当前主链路所需的 `projects.g1d_rsi` 桥接源码现已附在 [runtime](runtime/README.md) |
 | G1D/Dex1 URDF 与机器人 USD、桌面和物体 USD、标定、部位三角面图谱 | `env_resolved.json` 和计划文件中各路径。抓取路径筛选和 Part Hit 都使用这些几何 |
 | 已验机器实测与场景基线 | `runs/lab_school_03/result.json` 以及统一执行模板 `runs/three_view_step0_01/plans/expert_carton.json` |
 | 训练数据与专家计划 | `runs/tier1_v3_01/` 下的真实 HDF5、原清单、专家计划与回执 |
@@ -81,7 +81,7 @@ tail -f runs/step3b_01.log
 | `runs/step3b_01/stage1_progress.json` | 每个资产和采集模式已验收多少条 |
 | `runs/step3b_01/training_split.json`、`data_report.md` | 合库与分区结果 |
 | `runs/step3b_01/stage2_progress.json`、`fit/loss_curves.csv` | 当前轮次与训练／验证损失。`fit/` 在同一工作目录下 |
-| `runs/step3b_01/stage3_progress.json`、`evaluation/selection.json` | 正在评哪组、选中了哪个检查点。`evaluation/` 在同一工作目录下 |
+| `runs/step3b_01/stage3_progress.json`、`evaluation/adaptive_gripper_v2/selection.json` | 正在评哪组、选中了哪个检查点。`evaluation/` 在同一工作目录下；旧部署的结果仍在 `evaluation/` 顶层 |
 | `runs/step3b_01_stage{1,2,3}.complete`、`runs/step3b_01.complete` | 阶段和全流程完成回执。读取内容确认 `outcome` 为 `PASS` |
 | `runs/step3b_01/final_report.md` | 完成冻结评测后生成的分层结果 |
 

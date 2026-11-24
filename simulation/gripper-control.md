@@ -22,6 +22,8 @@
 
 **入口默认行为需要区分：**直接创建 `LiftGateConfig()` 得到 `adaptive`；共用分片接口 `step2_dev.simulate()` 默认仍为 `legacy`；旧清单没有 `gripper_mode` 时也按 `legacy` 读取。这样原数据回放和历史对照仍能使用原控制口径。需要修复版本时，显式传入 `gripper_mode="adaptive"`，或在清单的 `unified_lift_gate` 中写入该字段。仅更新 Python 文件不会把所有旧计划切换成新版本。
 
+2026-11-24 审查补丁已让 `step3b_eval.py` 正式评测入口显式选择 `adaptive`，正式运行时会重新测量同版 A40 基线；结果按执行合同缓存。补丁已同步到 GitHub，并在本地与服务器暂存目录通过验证，尚未切换常驻生产总控。详见 [审查报告](../docs/reports/2026-11-24-pipeline-audit.md)。
+
 ## 批采如何启用
 
 当前运行目录使用两个小配置文件：

@@ -12,7 +12,7 @@ dependencies = ["numpy>=1.23", "h5py>=3.8"]
 
 [project.optional-dependencies]
 v3a = ["torch>=2.1", "torchvision>=0.16", "scipy>=1.9", "opencv-python-headless>=4.7"]
-test = ["pytest>=7.1"]
+test = ["pytest>=7.1", "scipy>=1.9"]
 
 [project.scripts]
 g1d-data = "g1d_grasp.data.cli:main"
